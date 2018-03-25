@@ -4,12 +4,13 @@ from bs4 import BeautifulSoup as bs
 import requests
 import time
 import re
+import sys
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 
-def start():
+def start(input_file, output_file):
     driver = webdriver.Chrome()
     driver.get("https://paleobiodb.org/classic/quickSearch")
 
@@ -19,7 +20,7 @@ def start():
     completed_urls={}
     searches=0
     # taxons.txt contains the names of the genuses to be scrapped and output.txt contains the output data
-    with open("taxons.txt", "r") as readfile, open("output.txt","w") as writefile:
+    with open(input_file, "r") as readfile, open(output_file,"w") as writefile:
         for taxon in readfile:
             taxon=taxon.split("\n")[0]
             searches+=1
@@ -42,12 +43,17 @@ def start():
                 element = WebDriverWait(driver, timeout).until(EC.presence_of_element_located((By.CLASS_NAME, "autocompleteTitle")))
             except TimeoutException:
                 pass
+            time.sleep(3)
             search.send_keys(Keys.RETURN)
+            try:
+                search.send_keys(Keys.RETURN)
+            except:
+                pass
             url =(driver.current_url)
             
             # stores the unique taxon number so that it does not store any duplicates
             tx_no=url.split("=",1)[1] #Taxon number
-            print(tx_no)
+            
             if tx_no in completed_urls:
                 print("This taxon is already covered in "+completed_urls[tx_no])
                 writefile.write("This taxon is already covered in "+completed_urls[tx_no]+"\n")
@@ -70,11 +76,11 @@ def start():
                     writefile.write("\nSynonyms :{}\n".format(syn_list))
 
                 # this is just a filter that can be used to get the genuses that existed at a specific geologocal epoch
-                elif t.startswith("• Paleocene of") or t.startswith("• Oligocene of") or t.startswith("• Eocene of") :
+                elif t.startswith("•") :
                     writefile.write(t+"\n")
                     print(t)
                     flag=True
-            print(flag)
+            
             if flag==True:    
                 print("\n\n")
                 writefile.write("\n\n")
@@ -87,4 +93,9 @@ def start():
     print("Missed Taxons: {}".format(missed))
 
 if __name__=="__main__":
-    start()
+    if len(sys.argv) == 3:
+        start(sys.argv[1],sys.argv[2])
+    else:
+        print("Plsease provide the arguements")
+        print("Put the name of our input and output file after main.py ")
+        print("python main.py input_file output_file")
